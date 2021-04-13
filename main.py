@@ -1,11 +1,15 @@
 from argparse import ArgumentParser
 
 from config import cfg_from_file, cfg
+from models.dla_models import get_model
 
 
 class Trainer:
     def __init__(self):
-        self.init_config()
+        self.cfg = self.init_config()
+        self.best_prec1 = 0
+
+        self.model = get_model(self.cfg)
 
     def init_config(self):
         parser = ArgumentParser(description='configs of DLA')
@@ -21,6 +25,8 @@ class Trainer:
 
         assert args.cfg is not None, 'Missing cfg file'
         cfg_from_file(args.cfg)
+
+        return cfg
 
 
 if __name__ == '__main__':

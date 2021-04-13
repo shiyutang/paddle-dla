@@ -11,7 +11,35 @@ cfg = EasyDict()
 
 # COMMON CONFIGS
 cfg.name = '0413_paddle_DLA'
-cfg.Data_dir = ''
+cfg.nbr_class = 1000
+# DATA
+cfg.Data.Dir = ''
+cfg.Data.dataset = 'imagenet'
+cfg.Data.batch_size = 256
+cfg.Data.num_workers = 4
+# transforms
+cfg.Trans.crop_size = '224,224'
+cfg.Trans.scale_size = '224,224'
+cfg.Trans.crop_10 = True
+cfg.Trans.down_ratio = 2
+cfg.Trans.random_color = True
+cfg.Trans.min_area_ratio = 0.08
+cfg.Trans.aspect_ratio = 4.0/3
+
+# Network
+cfg.Net.arch = 'dla60'
+
+# Training
+cfg.Train.epochs = 120
+cfg.Train.Start_epoch = 0
+cfg.Train.lr = 0.1
+cfg.Train.momentum = 0.9
+cfg.Train.weight_decay = 1e-4
+cfg.Train.resume = False
+cfg.Train.pretrained = True
+
+# LOG
+cfg.Log.print_freq = 10
 
 
 def _merge_a_into_b(a, b):
