@@ -9,7 +9,7 @@ class Trainer:
         self.cfg = self.init_config()
         self.best_prec1 = 0
 
-        self.model = get_model(self.cfg)
+        self.model = get_model(self.cfg, num_classes=self.cfg.nbr_class, pool_size=self.cfg.Trans.crop_size//32)
 
     def init_config(self):
         parser = ArgumentParser(description='configs of DLA')
