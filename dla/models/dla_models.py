@@ -3,43 +3,27 @@ import math
 import paddle
 import paddle.nn as nn
 
-
-class Mnist(paddle.nn.Layer):
-    def __init__(self):
-        super(Mnist, self).__init__()
-
-        self.flatten = paddle.nn.Flatten()
-        self.linear_1 = paddle.nn.Linear(784, 512)
-        self.linear_2 = paddle.nn.Linear(512, 10)
-        self.relu = paddle.nn.ReLU()
-        self.dropout = paddle.nn.Dropout(0.2)
-
-    def forward(self, inputs):
-        y = self.flatten(inputs)
-        y = self.linear_1(y)
-        y = self.relu(y)
-        y = self.dropout(y)
-        y = self.linear_2(y)
-
-        return y
+from config import cfg
 
 
 class BasicBlock(paddle.nn.Layer):
     def __init__(self, inplanes, planes, stride=1, dilation=1):
         super(BasicBlock, self).__init__()
-        self.conv = nn.Conv2D(inplanes, planes, kernel_size=3, stride=stride, padding=dilation,
-                              dilation=dilation, bias_attr=False,
-                              weight_attr=paddle.framework.ParamAttr(
-                                  initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. /(3*3*planes)))))
-        self.bn1 = nn.BatchNorm2D(planes, weight_attr=nn.initializer.Constant(value=1),
-                                  bias_attr=nn.initializer.Constant(value=0))
+        self.conv1 = nn.Conv2D(inplanes, planes, kernel_size=3, stride=stride, padding=dilation,
+                               dilation=dilation, bias_attr=False,
+                               weight_attr=paddle.framework.ParamAttr(
+                                   initializer=paddle.nn.initializer.Normal(mean=0.0,
+                                                                            std=math.sqrt(2. / (3 * 3 * planes)))))
+        self.bn1 = nn.BatchNorm2D(planes)  # , weight_attr=nn.initializer.Assign(paddle.full([1], planes)),
+        # bias_attr=nn.initializer.Assign(paddle.full([0], planes)))
         self.relu = nn.ReLU()
         self.conv2 = nn.Conv2D(planes, planes, kernel_size=3, stride=1, padding=dilation,
-                               bias_attr=False,dilation=dilation,
+                               bias_attr=False, dilation=dilation,
                                weight_attr=paddle.framework.ParamAttr(
-                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. /(3*3*planes)))))
-        self.bn2 = nn.BatchNorm2D(planes, weight_attr=nn.initializer.Constant(value=1),
-                                  bias_attr=nn.initializer.Constant(value=0))
+                                   initializer=paddle.nn.initializer.Normal(mean=0.0,
+                                                                            std=math.sqrt(2. / (3 * 3 * planes)))))
+        self.bn2 = nn.BatchNorm2D(planes)  # , weight_attr=nn.initializer.Assign(paddle.full([1], planes)),
+        # bias_attr=nn.initializer.Assign(paddle.full([0], planes)))
 
     def forward(self, x, residual=None):
         if residual is None:
@@ -61,27 +45,29 @@ class BasicBlock(paddle.nn.Layer):
 class Bottleneck(paddle.nn.Layer):
     expansion = 2
 
-    def __init__(self, inplanes,planes,stride=1,dilation=1)
+    def __init__(self, inplanes, planes, stride=1, dilation=1):
         super(Bottleneck, self).__init__()
-        bottle_planes = planes//Bottleneck.expansion
+        bottle_planes = planes // Bottleneck.expansion
         self.conv1 = nn.Conv2D(inplanes, bottle_planes, kernel_size=1, bias_attr=False,
                                weight_attr=paddle.framework.ParamAttr(
-                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. /bottle_planes))))
+                                   initializer=paddle.nn.initializer.Normal(mean=0.0,
+                                                                            std=math.sqrt(2. / bottle_planes))))
         self.bn1 = nn.BatchNorm(bottle_planes)
         self.conv2 = nn.Conv2D(bottle_planes, bottle_planes, kernel_size=3, stride=stride,
-                               padding=dilation,bias_attr=False,dilation=dilation,
+                               padding=dilation, bias_attr=False, dilation=dilation,
                                weight_attr=paddle.framework.ParamAttr(
-                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. /(3*3*bottle_planes)))))
+                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(
+                                       2. / (3 * 3 * bottle_planes)))))
         self.bn2 = nn.BatchNorm(bottle_planes)
-        self.conv3 = nn.Conv2D(bottle_planes, planes, kernel_size=1,bias_attr=False,
+        self.conv3 = nn.Conv2D(bottle_planes, planes, kernel_size=1, bias_attr=False,
                                weight_attr=paddle.framework.ParamAttr(
-                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. /planes))))
+                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. / planes))))
         self.bn3 = nn.BatchNorm(planes)
         self.relu = nn.ReLU()
 
-    def forward(self,x,residual=None):
+    def forward(self, x, residual=None):
         if residual is None:
-            residual=x
+            residual = x
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -99,35 +85,40 @@ class Bottleneck(paddle.nn.Layer):
 
         return out
 
+
 class BottleneckX(paddle.nn.Layer):
     expansion = 2
     cardinality = 32
 
     def __init__(self, inplanes, planes, stride=1, dilation=1):
         super(BottleneckX, self).__init__()
-        bottle_planes = planes*BottleneckX.cardinality//32
+        bottle_planes = planes * BottleneckX.cardinality // 32
         self.conv1 = nn.Conv2D(inplanes, bottle_planes, kernel_size=1, bias_attr=False,
                                weight_attr=paddle.framework.ParamAttr(
-                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. /bottle_planes))))
-        self.bn1 = nn.BatchNorm2D(bottle_planes, weight_attr=nn.initializer.Constant(value=1),
-                                  bias_attr=nn.initializer.Constant(value=0))
-        self.conv2 = nn.Conv2D(bottle_planes,bottle_planes, kernel_size=3,
+                                   initializer=paddle.nn.initializer.Normal(mean=0.0,
+                                                                            std=math.sqrt(2. / bottle_planes))))
+        self.bn1 = nn.BatchNorm2D(
+            bottle_planes)  # , weight_attr=nn.initializer.Assign(paddle.full([1], bottle_planes)),
+        # bias_attr=nn.initializer.Assign(paddle.full([0], bottle_planes)))
+        self.conv2 = nn.Conv2D(bottle_planes, bottle_planes, kernel_size=3,
                                stride=stride, padding=dilation, bias_attr=False,
-                               dilation=dilation,groups=BottleneckX.cardinality,
+                               dilation=dilation, groups=BottleneckX.cardinality,
                                weight_attr=paddle.framework.ParamAttr(
-                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. /(3*3*bottle_planes)))))
-        self.bn2 = nn.BatchNorm2D(bottle_planes, weight_attr=nn.initializer.Constant(value=1),
-                                  bias_attr=nn.initializer.Constant(value=0))
+                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(
+                                       2. / (3 * 3 * bottle_planes)))))
+        self.bn2 = nn.BatchNorm2D(
+            bottle_planes)  # , weight_attr=nn.initializer.Assign(paddle.full([1], bottle_planes)),
+        # bias_attr=nn.initializer.Assign(paddle.full([0], bottle_planes)))
         self.conv3 = nn.Conv2D(bottle_planes, planes, kernel_size=1, bias_attr=False,
                                weight_attr=paddle.framework.ParamAttr(
-                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. /planes))))
-        self.bn3 = nn.BatchNorm2D(planes, weight_attr=nn.initializer.Constant(value=1),
-                                  bias_attr=nn.initializer.Constant(value=0))
+                                   initializer=paddle.nn.initializer.Normal(mean=0.0, std=math.sqrt(2. / planes))))
+        self.bn3 = nn.BatchNorm2D(planes)  # , weight_attr=nn.initializer.Assign(paddle.full([1], planes)),
+        # bias_attr=nn.initializer.Assign(paddle.full([0], planes)))
         self.relu = nn.ReLU()
 
     def forward(self, x, residual=None):
         if residual is None:
-            residual=x
+            residual = x
 
         out = self.conv1(x)
         out = self.bn1(out)
@@ -149,23 +140,25 @@ class BottleneckX(paddle.nn.Layer):
 class Root(nn.Layer):
     def __init__(self, inplanes, outplanes, kernel_size, residual):
         super(Root, self).__init__()
-        self.conv = nn.Conv2D(inplanes,outplanes, kernel_size, stride=1,
-                              bias_attr=False, padding=(kernel_size-1)//2,
+        self.conv = nn.Conv2D(inplanes, outplanes, kernel_size, stride=1,
+                              bias_attr=False, padding=(kernel_size - 1) // 2,
                               weight_attr=paddle.framework.ParamAttr(
                                   initializer=paddle.nn.initializer.Normal(
-                                      mean=0.0, std=math.sqrt(2. /(kernel_size*kernel_size*outplanes)))))
-        self.bn = nn.BatchNorm2D(outplanes, weight_attr=nn.initializer.Constant(value=1),
-                                 bias_attr=nn.initializer.Constant(value=0))
+                                      mean=0.0, std=math.sqrt(2. / (kernel_size * kernel_size * outplanes)))))
+        self.bn = nn.BatchNorm2D(outplanes)  # , weight_attr=nn.initializer.Assign(paddle.full([1], outplanes)),
+        # bias_attr=nn.initializer.Assign(paddle.full([0], outplanes)))
         self.relu = nn.ReLU()
         self.residual = residual
 
     def forward(self, *x):
         children = x
-        x = self.conv(paddle.concat(x, 1)) # 按行拼接
+        x = self.conv(paddle.concat(x, 1))  # 按行拼接
         x = self.bn(x)
         if self.residual:
             x += children[0]
         x = self.relu(x)
+
+        return x
 
 
 class Tree(nn.Layer):
@@ -194,7 +187,7 @@ class Tree(nn.Layer):
                               root_kernel_size=root_kernel_size,
                               dilation=dilation, root_residual=root_residual)
         if stride > 1:
-            self.downsample = nn.MaxPool2D(stride,stride=stride)
+            self.downsample = nn.MaxPool2D(stride, stride=stride)
         else:
             self.downsample = None
 
@@ -205,9 +198,9 @@ class Tree(nn.Layer):
                 nn.Conv2D(in_channels, out_channels, kernel_size=1, stride=1, bias_attr=False,
                           weight_attr=paddle.framework.ParamAttr(
                               initializer=paddle.nn.initializer.Normal(
-                                  mean=0.0, std=math.sqrt(2. /out_channels)))),
-                nn.BatchNorm2D(out_channels, weight_attr=nn.initializer.Constant(value=1),
-                               bias_attr=nn.initializer.Constant(value=0)))
+                                  mean=0.0, std=math.sqrt(2. / out_channels)))),
+                nn.BatchNorm2D(out_channels))  # weight_attr=nn.initializer.Assign(paddle.full([1], out_channels)),
+            # bias_attr=nn.initializer.Assign(paddle.full([0],out_channels))))
 
         self.level_root = level_root
         self.root_dim = root_dim
@@ -228,6 +221,7 @@ class Tree(nn.Layer):
             x = self.tree2(x1, children=children)
         return x
 
+
 class DLA(nn.Layer):
     def __init__(self, levels, channels, num_classes=1000,
                  block=BasicBlock, residual_root=False, return_levels=False,
@@ -237,9 +231,9 @@ class DLA(nn.Layer):
             nn.Conv2D(3, channels[0], kernel_size=7, stride=1, padding=3, bias_attr=False,
                       weight_attr=paddle.framework.ParamAttr(
                           initializer=paddle.nn.initializer.Normal(
-                              mean=0.0, std=math.sqrt(2. /49*channels[0])))),
-            nn.BatchNorm2D(channels[0], weight_attr=nn.initializer.Constant(value=1),
-                           bias_attr=nn.initializer.Constant(value=0)),
+                              mean=0.0, std=math.sqrt(2. / 49 * channels[0])))),
+            nn.BatchNorm2D(channels[0]),  # weight_attr=nn.initializer.Assign(paddle.full([1], channels[0])),
+            # bias_attr=nn.initializer.Assign(paddle.full([0], channels[0]))),
             nn.ReLU()
         )
         self.level0 = self._make_conv_level(channels[0], channels[0], levels[0])
@@ -253,15 +247,12 @@ class DLA(nn.Layer):
         self.level5 = Tree(levels[5], block, channels[4], channels[5], 2,
                            level_root=True, root_residual=residual_root)
         self.avgpool = nn.AvgPool2D(kernel_size=pool_size)
-        
-        self.fc = nn.Conv2D(channels[-1], num_classes, kernel_size=1, stride=1, 
+
+        self.fc = nn.Conv2D(channels[-1], num_classes, kernel_size=1, stride=1,
                             padding=0, bias_attr=False,
                             weight_attr=paddle.framework.ParamAttr(
                                 initializer=paddle.nn.initializer.Normal(
-                                    mean=0.0, std=math.sqrt(2. /num_classes))))
-        
-        for m in self.modules:
-
+                                    mean=0.0, std=math.sqrt(2. / num_classes))))
 
         self.channels = channels
         self.return_levels = return_levels
@@ -272,20 +263,19 @@ class DLA(nn.Layer):
         for i in range(convs):
             modules.extend([
                 nn.Conv2D(inplanes, outplanes, kernel_size=3,
-                          stride=stride if i==0 else 1,
+                          stride=stride if i == 0 else 1,
                           padding=dilation, bias_attr=False, dilation=dilation,
                           weight_attr=paddle.framework.ParamAttr(
                               initializer=paddle.nn.initializer.Normal(
-                                  mean=0.0, std=math.sqrt(2. /(9*outplanes))))),
-                nn.BatchNorm2D(outplanes, weight_attr=nn.initializer.Constant(value=1),
-                               bias_attr=nn.initializer.Constant(value=0)),
+                                  mean=0.0, std=math.sqrt(2. / (9 * outplanes))))),
+                nn.BatchNorm2D(outplanes),  # weight_attr=nn.initializer.Assign(paddle.full([1], outplanes)),
+                # bias_attr=nn.initializer.Assign(paddle.full([0], outplanes))),
                 nn.ReLU()])
             inplanes = outplanes
 
         return nn.Sequential(*modules)
 
-
-    def forward(self,x):
+    def forward(self, x):
         y = []
         x = self.base_layer(x)
         for i in range(6):
@@ -296,46 +286,47 @@ class DLA(nn.Layer):
         else:
             x = self.avgpool(x)
             x = self.fc(x)
-            x = x.reshape(x.shape[0], -1)
+            x = x.reshape([x.shape[0], -1])
 
             return x
 
 
-def get_model(cfg=None, **kwargs):
-    if cfg.Net.arch == 'dla34':
+def get_model(config=None, **kwargs):
+    if config.arch == 'dla34':
         model = DLA([1, 1, 1, 2, 2, 1],
                     [16, 32, 64, 128, 256, 512],
                     block=BasicBlock, **kwargs)
-    elif cfg.Net.arch == 'dla60':
+    elif config.arch == 'dla60':
         Bottleneck.expansion = 2
         model = DLA([1, 1, 1, 2, 3, 1],
                     [16, 32, 128, 256, 512, 1024],
                     block=Bottleneck, **kwargs)
-    elif cfg.Net.arch == 'dla60x':
+    elif config.arch == 'dla60x':
         BottleneckX.expansion = 2
         model = DLA([1, 1, 1, 2, 3, 1],
                     [16, 32, 128, 256, 512, 1024],
                     block=BottleneckX, **kwargs)
-    elif cfg.Net.arch == 'dla102x':  # DLA-X-102
+    elif config.arch == 'dla102x':  # DLA-X-102
         BottleneckX.expansion = 2
         model = DLA([1, 1, 1, 3, 4, 1], [16, 32, 128, 256, 512, 1024],
                     block=BottleneckX, residual_root=True, **kwargs)
-    elif cfg.Net.arch == 'dla102x2':  # DLA-X-102 64
+    elif config.arch == 'dla102x2':  # DLA-X-102 64
         BottleneckX.cardinality = 64
         model = DLA([1, 1, 1, 3, 4, 1], [16, 32, 128, 256, 512, 1024],
                     block=BottleneckX, residual_root=True, **kwargs)
-    elif cfg.Net.arch == 'dla169':
+    elif config.arch == 'dla169':
         Bottleneck.expansion = 2
         model = DLA([1, 1, 2, 3, 5, 1], [16, 32, 128, 256, 512, 1024],
                     block=Bottleneck, residual_root=True, **kwargs)
     else:
-        raise '{} is not implemented'.format(cfg.Net.arch)
+        raise '{} is not implemented'.format(config.arch)
 
-    if cfg.Train.pretrained is not None:
-        model.load_pretrained_model(cfg.Train.pretrained, cfg.Net.arch)
+    # if config.Train.pretrained is not None: model trained on torch cannot be loaded into paddle
+    #     model.load_pretrained_model(config.arch)
 
     return model
 
+
 if __name__ == '__main__':
     mnist2 = get_model(cfg)
-    paddle.summary(mnist2, (64,3,224,224))
+    paddle.summary(mnist2, (64, 3, 224, 224))
