@@ -39,9 +39,10 @@ class Trainer:
                                                    weight_decay=self.cfg.Train.weight_decay,
                                                    momentum=self.cfg.Train.momentum)
 
-        self.scheduler = paddle.optimizer.lr.StepDecay(learning_rate=self.cfg.Train.lr, step_size=30,
-                                                       gamma=self.cfg.Train.step_ratio, verbose=True)
+        # self.scheduler = paddle.optimizer.lr.StepDecay(learning_rate=self.cfg.Train.lr, step_size=30,
+        #                                                gamma=self.cfg.Train.step_ratio, verbose=True)
 
+        self.scheduler = paddle.optimizer.lr.NaturalExpDecay(learning_rate=self.cfg.Train.lr, gamma=0.95, verbose=True)
         # criterion
         self.criterion = paddle.nn.CrossEntropyLoss()
 
@@ -79,15 +80,15 @@ class Trainer:
 
         self.model.train()
 
-        for i, (input, target) in tqdm(enumerate(self.train_loader)):
+        for i, (input, target) in tqdm(enumerate(self.train_loader), total=len(self.train_loader)):
             output = self.model(input)
             loss = self.criterion(output, target)
 
             # print(output) # Tensor(shape=[256, 1000]
             prec1, prec5 = accuracy(output, target, topk=(1, 5))
-            losses.update(loss.item(), input.shape(0))
-            top1.update(prec1.item(), input.shape(0))
-            top5.update(prec5.item(), input.shape(0))
+            losses.update(loss.numpy()[0], input.shape[0])
+            top1.update(prec1.numpy()[0], input.shape[0])
+            top5.update(prec5.numpy()[0], input.shape[0])
 
             self.optimizer.clear_grad()
             loss.backward()
@@ -127,12 +128,12 @@ class Trainer:
 
             # measure accuracy and record loss
             prec1, prec5 = accuracy(output, target, topk=(1, 5))
-            losses.update(loss.item(), input.size(0))
-            top1.update(prec1.item(), input.size(0))
-            top5.update(prec5.item(), input.size(0))
+            losses.update(loss.numpy()[0], input.shape[0])
+            top1.update(prec1.numpy()[0], input.shape[0])
+            top5.update(prec5.numpy()[0], input.shape[0])
 
-        print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
-              .format(top1=top1, top5=top5))
+        self.logger.info(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
+                         .format(top1=top1, top5=top5))
 
         return top1.avg, top5.avg
 

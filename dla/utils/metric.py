@@ -27,8 +27,7 @@ def accuracy(output, target, topk=(1,)):
 
     _, pred = paddle.topk(output, maxk, 1, True, True)  # 256, 5
     pred = paddle.t(pred)  # 5,256
-    correct = paddle.equal(pred, paddle.expand_as(target.reshape([1, -1]), pred))  # 5, 256
-    print(correct)
+    correct = paddle.equal(pred, paddle.expand_as(target.reshape([1, -1]), pred)).astype('float32')  # 5, 256
 
     res = []
     for k in topk:
